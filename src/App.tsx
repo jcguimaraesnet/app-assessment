@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { buildQuestionSet, countLines } from './questionSet';
 
 type Phase = 'start' | 'quiz' | 'finish';
 type SetupStep = 'input' | 'loading' | 'loaded';
@@ -54,26 +55,6 @@ const SEED_HARD = [
   'What is the difference between pass-by-value and pass-by-reference?',
   'Describe what a race condition is and how you might prevent one.',
 ].join('\n');
-
-function shuffle<T>(items: T[]) {
-  const copy = items.slice();
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function parseLines(text: string) {
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#') && !line.startsWith('//'));
-}
-
-function countLines(text: string) {
-  return parseLines(text).length;
-}
 
 function formatTime(totalMs: number) {
   const secsLeft = Math.max(0, Math.ceil(totalMs / 1000));
@@ -231,24 +212,26 @@ function Assessment() {
   }
 
   function loadSet() {
-    setState((prev) => {
-      if (!prev.studentName.trim()) return prev;
+    if (!state.studentName.trim()) return;
 
-      const easy = parseLines(prev.easyText);
-      const hard = parseLines(prev.hardText);
-      const selected = shuffle(easy).slice(0, prev.easyCount).concat(shuffle(hard).slice(0, prev.hardCount));
+    // Build the set here (not inside a setState updater): keeps the reducer
+    // pure and avoids StrictMode double-invocation scheduling two timers.
+    const selected = buildQuestionSet(
+      state.easyText,
+      state.hardText,
+      state.easyCount,
+      state.hardCount,
+    );
 
-      window.setTimeout(() => {
-        setState((later) => {
-          if (!selected.length) {
-            return { ...later, setupStep: 'input' };
-          }
-          return { ...later, questions: selected, setupStep: 'loaded', copied: false };
-        });
-      }, 1000);
+    setState((prev) => ({ ...prev, setupStep: 'loading' }));
 
-      return { ...prev, setupStep: 'loading' };
-    });
+    window.setTimeout(() => {
+      setState((later) =>
+        selected.length
+          ? { ...later, questions: selected, setupStep: 'loaded', copied: false }
+          : { ...later, setupStep: 'input' },
+      );
+    }, 1000);
   }
 
   function copySummary() {
