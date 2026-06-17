@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { buildQuestionSet, countLines } from './questionSet';
 
 type Phase = 'start' | 'quiz' | 'finish';
@@ -55,6 +55,19 @@ const SEED_HARD = [
   'What is the difference between pass-by-value and pass-by-reference?',
   'Describe what a race condition is and how you might prevent one.',
 ].join('\n');
+
+// Break the line after each "?" that is immediately followed by more text,
+// so a question like "What is X? Explain why." shows the prompt and the
+// follow-up on separate lines. The follow-up text gets a softer style.
+function renderQuestionLines(text: string): ReactNode {
+  const lines = text.replace(/\?[ \t]+(?=\S)/g, '?\n').split('\n');
+  return lines.map((line, index) => (
+    <Fragment key={index}>
+      {index > 0 && <br />}
+      {index === 0 ? line : <span className="question-followup">{line}</span>}
+    </Fragment>
+  ));
+}
 
 function formatTime(totalMs: number) {
   const secsLeft = Math.max(0, Math.ceil(totalMs / 1000));
@@ -124,6 +137,15 @@ function Assessment() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Run the celebration only after the finish screen (and its <canvas>) has
+  // mounted. Effects fire post-commit, so canvasRef is populated here.
+  useEffect(() => {
+    if (state.phase !== 'finish') return;
+    startCelebration();
+    return () => stopCelebration();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase]);
 
   function clearTimer() {
     if (timerRef.current !== null) {
@@ -203,6 +225,7 @@ function Assessment() {
       ...prev,
       setupOpen: true,
       setupStep: 'input',
+      studentName: '',
       copied: false,
     }));
   }
@@ -336,8 +359,10 @@ function Assessment() {
 
   function finish() {
     clearTimer();
+    // Just switch phases. The celebration is started from an effect once the
+    // <canvas> is actually mounted — calling it here runs before the canvas
+    // exists in the DOM (setState is async), so the animation never starts.
     setState((prev) => ({ ...prev, phase: 'finish' }));
-    startCelebration();
   }
 
   function restart() {
@@ -353,6 +378,7 @@ function Assessment() {
   }
 
   function startCelebration() {
+    stopCelebration();
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -564,7 +590,7 @@ function Assessment() {
                 </div>
               ) : !state.expired ? (
                 <div className="question-panel">
-                  <p className="question-text">{state.questions[state.current] ?? ''}</p>
+                  <p className="question-text">{renderQuestionLines(state.questions[state.current] ?? '')}</p>
                   <div className="timer-ring">
                     <svg viewBox="0 0 172 172" aria-hidden="true">
                       <circle cx="86" cy="86" r={radius} fill="none" stroke="#e4e8f1" strokeWidth="9" />
@@ -587,6 +613,11 @@ function Assessment() {
                       <div className="timer-ring__label">remaining</div>
                     </div>
                   </div>
+                  {isLast && (
+                    <button className="primary-button finish-early" onClick={finish}>
+                      Finish
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="expired-panel">
@@ -636,9 +667,9 @@ function Assessment() {
           <div className="finish-copy">
             <div className="eyebrow eyebrow--bright">Assessment complete</div>
             <h1>Well done</h1>
-            <p>You&apos;ve reached the end. Thank you for your answers.</p>
+            <p>Thank you for your participation.</p>
             <button className="primary-button primary-button--ghost" onClick={restart}>
-              Start over
+              Restart
             </button>
           </div>
         </section>

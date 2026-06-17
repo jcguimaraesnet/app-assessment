@@ -325,6 +325,16 @@ textarea {
   text-wrap: pretty;
 }
 
+.question-followup {
+  display: inline-block;
+  margin-top: 10px;
+  color: #b3433a;
+  font-size: 0.74em;
+  font-style: italic;
+  font-weight: 400;
+  animation: redPulse 1.6s ease-in-out infinite;
+}
+
 .timer-ring {
   position: relative;
   width: 172px;
@@ -378,6 +388,11 @@ textarea {
 
 .timer-ring--expired {
   margin: 18px auto 28px;
+}
+
+.finish-early {
+  display: block;
+  margin: 36px auto 0;
 }
 
 .nav-bar {
@@ -763,6 +778,18 @@ textarea {
 @keyframes spinSlow {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes redPulse {
+  0%,
+  100% {
+    color: #b3433a;
+    opacity: 0.78;
+  }
+  50% {
+    color: #e0524a;
+    opacity: 1;
   }
 }
 
