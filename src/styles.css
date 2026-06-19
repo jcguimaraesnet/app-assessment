@@ -135,6 +135,13 @@ textarea {
   height: 22px;
 }
 
+.icon-button__text {
+  font-family: 'Public Sans', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .hero,
 .finish-copy {
   position: relative;

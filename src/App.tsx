@@ -129,6 +129,7 @@ function Assessment() {
   const celebrationRef = useRef<number | null>(null);
   const resizeRef = useRef<(() => void) | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -137,6 +138,22 @@ function Assessment() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the toggle in sync with the actual fullscreen state, including when
+  // the user leaves fullscreen via the browser (Esc key / OS controls).
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  }
 
   // Run the celebration only after the finish screen (and its <canvas>) has
   // mounted. Effects fire post-commit, so canvasRef is populated here.
@@ -542,6 +559,22 @@ function Assessment() {
           <div className="orb orb--one" />
           <div className="orb orb--two" />
           <div className="top-actions">
+            <button
+              className="icon-button"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? (
+                <span className="icon-button__text">ESC</span>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                  <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                  <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+              )}
+            </button>
             <button className="icon-button" aria-label="Edit questions" onClick={openBank}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="7" x2="14" y2="7" />
